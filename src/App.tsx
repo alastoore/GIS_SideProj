@@ -6,6 +6,7 @@ import { Analysis } from './components/sections/Analysis';
 import { CTA } from './components/sections/CTA';
 import { Contact } from './components/sections/Contact';
 import { Footer } from './components/layout/Footer';
+import { MapView } from './components/sections/MapView';
 
 export default function App() {
   const isScrolled = useScroll();
@@ -17,6 +18,7 @@ export default function App() {
         <Hero />
         <Features />
         <Analysis />
+        <MapView />
         <CTA />
         <Contact />
       </main>

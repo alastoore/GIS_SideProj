@@ -215,35 +215,25 @@ Generate recommended locations for future facilities by analyzing:
 
 ### Frontend
 
-- React
-- Mapbox GL JS
-- Tailwind CSS
-- Recharts
+[![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Mapbox](https://img.shields.io/badge/Mapbox-000000?style=for-the-badge&logo=mapbox&logoColor=white)](https://www.mapbox.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38BDF8?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
 ### Backend
 
-- Node.js
-- Express.js
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
 
 ### Database
 
-- PostgreSQL
-- PostGIS
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![PostGIS](https://img.shields.io/badge/PostGIS-336791?style=for-the-badge)](https://postgis.net/)
 
 ### GIS Tools
 
-- QGIS
-- GeoJSON
+[![Mapbox](https://img.shields.io/badge/Mapbox-000000?style=for-the-badge&logo=mapbox&logoColor=white)](https://www.mapbox.com/)
+[![GeoJSON](https://img.shields.io/badge/GeoJSON-000000?style=for-the-badge)](https://geojson.org/)
 
-### Data Science
-
-- Python
-- Pandas
-- GeoPandas
-- NumPy
-- Scikit-learn
-
----
 
 ## Database Schema
 

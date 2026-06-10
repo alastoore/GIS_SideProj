@@ -1,33 +1,43 @@
 import { Button } from '../ui/Button';
 
 export const Contact = () => (
-  <section id="contact" className="rounded-[2.5rem] border border-white/10 bg-slate-950/90 p-10 shadow-2xl shadow-slate-950/20">
-    <div className="mx-auto max-w-6xl">
-      <div className="grid gap-10 lg:grid-cols-[1.3fr_0.9fr] lg:items-center">
+  <section id="contact" className="bg-[#07101f] py-28">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="grid gap-16 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-300">
-            Let's build better access together
+          <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400">
+            Get in touch
           </p>
-          <h2 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            Talk to our GIS planning experts.
+          <h2 className="mt-4 text-4xl font-bold tracking-tight text-white sm:text-5xl">
+            Talk to our GIS planning team.
           </h2>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-400">
-            Share your coverage goals, and we’ll show you how to combine spatial insights with real-world facility planning to deliver measurable improvements.
+          <p className="mt-6 max-w-lg text-lg leading-8 text-slate-400">
+            Share your coverage goals and we'll show you how to combine spatial data with facility planning to deliver measurable improvements in access.
           </p>
         </div>
 
-        <div className="grid gap-4 rounded-[2rem] border border-white/10 bg-slate-900/80 p-8">
-          <div className="rounded-3xl bg-slate-950/70 p-6">
-            <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Contact</p>
-            <p className="mt-3 text-lg font-semibold text-white">hello@healthaccess.ai</p>
+        <div className="flex flex-col gap-3">
+          <div className="rounded-2xl border border-white/8 bg-[#060c18] p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Email</p>
+            <p className="mt-2 font-mono text-base text-white">hello@healthaccess.ai</p>
           </div>
-          <div className="rounded-3xl bg-slate-950/70 p-6">
-            <p className="text-sm uppercase tracking-[0.24em] text-slate-400">Office</p>
-            <p className="mt-3 text-lg font-semibold text-white">Manila, Philippines</p>
+          <div className="rounded-2xl border border-white/8 bg-[#060c18] p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Office</p>
+            <p className="mt-2 font-mono text-base text-white">Manila, Philippines</p>
           </div>
-          <div className="rounded-3xl bg-emerald-500/10 p-6">
-            <p className="text-sm uppercase tracking-[0.24em] text-emerald-300">Speak with sales</p>
-            <Button className="mt-4 w-full" variant="primary" size="md">Book a demo</Button>
+          <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/5 p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400">
+              Speak with sales
+            </p>
+            <p className="mt-2 mb-4 text-sm text-slate-400">
+              30-minute walkthrough, no commitment.
+            </p>
+            <Button
+              className="w-full bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+              size="md"
+            >
+              Book a demo
+            </Button>
           </div>
         </div>
       </div>

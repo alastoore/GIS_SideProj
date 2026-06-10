@@ -1,5 +1,41 @@
 # HealthAccess: A GIS-Based Healthcare Accessibility Analysis and Facility Recommendation System
 
+<p align="center">
+  <a href="https://react.dev/">
+    <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
+  </a>
+  <a href="https://www.mapbox.com/">
+    <img src="https://img.shields.io/badge/Mapbox-000000?style=for-the-badge&logo=mapbox&logoColor=white" />
+  </a>
+  <a href="https://tailwindcss.com/">
+    <img src="https://img.shields.io/badge/Tailwind_CSS-38BDF8?style=for-the-badge&logo=tailwind-css&logoColor=white" />
+  </a>
+  <a href="https://nodejs.org/">
+    <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" />
+  </a>
+  <a href="https://expressjs.com/">
+    <img src="https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white" />
+  </a>
+  <a href="https://www.postgresql.org/">
+    <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
+  </a>
+  <a href="https://postgis.net/">
+    <img src="https://img.shields.io/badge/PostGIS-336791?style=for-the-badge" />
+  </a>
+</p>
+
+<p align="center">
+<a href="https://python.org/">
+    <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  </a>
+  <a href="https://pandas.pydata.org/">
+    <img src="https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white" />
+  </a>
+</p>
+
+---
+
+
 ## Overview
 
 HealthAccess is a web-based Geographic Information System (GIS) that analyzes healthcare accessibility across communities and identifies underserved areas. The system combines spatial analysis, data science, and interactive mapping to help visualize healthcare coverage and recommend optimal locations for future healthcare facilities.

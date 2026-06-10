@@ -10,14 +10,38 @@ export default function App() {
   const isScrolled = useScroll();
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-secondary/30 selection:text-secondary-fixed">
+    <div className="min-h-screen w-full bg-slate-950 text-slate-100 font-sans antialiased">
+      
       <Navbar scrolled={isScrolled} />
-      <main>
-        <Hero />
-        <Features />
-        <Analysis />
-        <CTA />
+
+      <main className="w-full">
+        
+        {/* HERO - FULL SCREEN */}
+        <section className="min-h-screen flex items-center justify-center px-6">
+          <Hero />
+        </section>
+
+        {/* FEATURES */}
+        <section className=" flex items-center px-6">
+          <div className="w-full">
+            <Features />
+          </div>
+        </section>
+
+        {/* ANALYSIS */}
+        <section className="min-h-screen flex items-center px-6">
+          <div className="w-full">
+            <Analysis />
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="min-h-screen flex items-center justify-center px-6">
+          <CTA />
+        </section>
+
       </main>
+
       <Footer />
     </div>
   );

@@ -360,4 +360,4 @@ export const MapView = () => {
       </div>
     </section>
   );
-};
+};   

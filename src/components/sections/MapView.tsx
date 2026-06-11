@@ -5,7 +5,7 @@ import type { FeatureCollection } from 'geojson';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import geojsonData from '../../assets/cebu_health_accessibility.geojson';
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_URL;
 const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE ?? 'mapbox://styles/aaaranas/cmq8dc1r9009v01rfavkk0yy5';
 const MAPBOX_TOKEN_MISSING = !MAPBOX_TOKEN;
 
@@ -129,6 +129,7 @@ export const MapView = () => {
   const onLoad = useCallback(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
+
 
     // Real 3D buildings at high zoom
     map.addLayer({

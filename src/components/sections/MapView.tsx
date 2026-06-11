@@ -1,11 +1,19 @@
 import { useRef, useCallback, useState } from 'react';
 import Map, { Source, Layer, Popup } from 'react-map-gl/mapbox';
-import type { MapLayerMouseEvent, MapRef } from 'react-map-gl/mapbox';
+import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox';
 import type { FeatureCollection } from 'geojson';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import geojsonData from '../../assets/cebu_health_accessibility.geojson';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE ?? 'mapbox://styles/aaaranas/cmq8dc1r9009v01rfavkk0yy5';
+const MAPBOX_TOKEN_MISSING = !MAPBOX_TOKEN;
+
+if (MAPBOX_TOKEN_MISSING) {
+  console.warn(
+    'Missing Mapbox token: add VITE_MAPBOX_TOKEN to a local .env file and restart the Vite dev server.'
+  );
+}
 
 interface BarangayProps {
   adm4_name: string;
@@ -23,7 +31,7 @@ interface PopupInfo {
 }
 
 // Flat fill for base color reference
-const fillLayer = {
+const fillLayer: any = {
   id: 'barangay-fill',
   type: 'fill' as const,
   paint: {
@@ -33,7 +41,7 @@ const fillLayer = {
 };
 
 // 3D extrusion layer — height driven by accessibility_score
-const extrusionLayer = {
+const extrusionLayer: any = {
   id: 'barangay-extrusion',
   type: 'fill-extrusion' as const,
   paint: {
@@ -82,7 +90,7 @@ const extrusionLayer = {
   },
 };
 
-const strokeLayer = {
+const strokeLayer: any = {
   id: 'barangay-stroke',
   type: 'line' as const,
   paint: {
@@ -147,7 +155,7 @@ export const MapView = () => {
     });
   }, []);
 
-  const onMouseMove = useCallback((e: MapLayerMouseEvent) => {
+  const onMouseMove = useCallback((e: MapMouseEvent) => {
     const map = mapRef.current?.getMap();
     if (!map || !e.features?.length) return;
 
@@ -190,7 +198,7 @@ export const MapView = () => {
     if (clickedId.current === null) setPopup(null);
   }, []);
 
-  const onClick = useCallback((e: MapLayerMouseEvent) => {
+  const onClick = useCallback((e: MapMouseEvent) => {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
@@ -258,24 +266,24 @@ export const MapView = () => {
           className="overflow-hidden rounded-3xl border border-white/8"
           style={{ height: '560px' }}
         >
-          <Map
-            ref={mapRef}
-            initialViewState={{
-              longitude: 124.0,
-              latitude: 10.35,
-              zoom: 8.5,
-              pitch: 60,
-              bearing: -10,
-            }}
-            style={{ width: '100%', height: '100%' }}
-            mapStyle="mapbox://styles/aaaranas/cmq8dc1r9009v01rfavkk0yy5"
-            mapboxAccessToken={MAPBOX_TOKEN}
-            interactiveLayerIds={['barangay-fill', 'barangay-extrusion']}
-            onMouseMove={onMouseMove}
-            onMouseLeave={onMouseLeave}
-            onClick={onClick}
-            onLoad={onLoad}
-          >
+            <Map
+              ref={mapRef}
+              initialViewState={{
+                longitude: 124.0,
+                latitude: 10.35,
+                zoom: 8.5,
+                pitch: 60,
+                bearing: -10,
+              }}
+              style={{ width: '100%', height: '100%' }}
+              mapStyle={MAPBOX_STYLE}
+              mapboxAccessToken={MAPBOX_TOKEN}
+              interactiveLayerIds={['barangay-fill', 'barangay-extrusion']}
+              onMouseMove={onMouseMove}
+              onMouseLeave={onMouseLeave}
+              onClick={onClick}
+              onLoad={onLoad}
+            >
             <Source
               id="barangays"
               type="geojson"

@@ -38,11 +38,33 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* Brand theme: dark navy + cyan. The site is dark-only — tokens live on
-   :root and html carries the `dark` class for dark: variants. */
+/* Brand theme. Light: warm paper + deep teal. Dark: navy + cyan. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --radius: 0.75rem;
+  --background: #faf7f2;
+  --foreground: #182234;
+  --card: #ffffff;
+  --card-foreground: #182234;
+  --popover: #ffffff;
+  --popover-foreground: #182234;
+  --primary: #0e7490;
+  --primary-foreground: #f8fafc;
+  --secondary: #e9e4da;
+  --secondary-foreground: #182234;
+  --muted: #ece7dd;
+  --muted-foreground: #5b6678;
+  --accent: #e3f3f7;
+  --accent-foreground: #0f3a47;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(24, 34, 52, 0.12);
+  --input: rgba(24, 34, 52, 0.16);
+  --ring: rgba(14, 116, 144, 0.4);
+}
+
+.dark {
+  color-scheme: dark;
   --background: #060c18;
   --foreground: #ede9e3;
   --card: #0a1628;
@@ -94,6 +116,6 @@ body {
 
 ::selection {
   background: rgba(34, 211, 238, 0.25);
-  color: #ede9e3;
+  color: var(--foreground);
 }
 

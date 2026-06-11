@@ -28,22 +28,22 @@ export const Hero = () => {
     document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth' });
 
   return (
-    <div id="top" className="relative overflow-hidden bg-[#060c18] px-4 pt-44 pb-28 sm:px-6 lg:px-8">
+    <div id="top" className="relative overflow-hidden bg-background px-4 pt-44 pb-28 sm:px-6 lg:px-8">
       {/* Soft glow behind the headline */}
       <div className="pointer-events-none absolute left-1/2 top-24 h-96 w-96 -translate-x-1/2 rounded-full bg-cyan-500/8 blur-[80px]" />
 
       <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center text-center">
-        <p className="font-mono text-xs tracking-widest text-slate-500">
+        <p className="font-mono text-xs tracking-widest text-muted-foreground">
           Cebu, Philippines · 1,203 barangays · updated June 2026
         </p>
 
         <h1 className="font-display mt-8 max-w-4xl text-5xl font-medium leading-[1.08] tracking-tight text-foreground sm:text-6xl lg:text-7xl">
           See where healthcare access{' '}
-          <em className="text-amber-200/90">falls short</em>{' '}
+          <em className="text-amber-600 dark:text-amber-200/90">falls short</em>{' '}
           in Cebu.
         </h1>
 
-        <p className="mt-8 max-w-xl text-lg leading-relaxed text-slate-400">
+        <p className="mt-8 max-w-xl text-lg leading-relaxed text-muted-foreground">
           An open GIS atlas that ranks every barangay in the province by healthcare
           accessibility — made to help local government units see underserved communities
           and decide where the next health facility matters most.
@@ -61,7 +61,7 @@ export const Hero = () => {
           <Button
             variant="link"
             size="lg"
-            className="h-12 text-base text-slate-300"
+            className="h-12 text-base text-foreground/80"
             onClick={() => scrollTo('#map')}
           >
             or jump straight to the map →
@@ -75,11 +75,11 @@ export const Hero = () => {
               className={
                 i === 0
                   ? 'text-center sm:flex-1 sm:pr-8'
-                  : 'text-center sm:flex-1 sm:border-l sm:border-white/10 sm:px-8'
+                  : 'text-center sm:flex-1 sm:border-l sm:border-border sm:px-8'
               }
             >
               <p className="font-mono text-4xl text-foreground">{item.value}</p>
-              <p className="mt-2 text-sm leading-5 text-slate-500">{item.label}</p>
+              <p className="mt-2 text-sm leading-5 text-muted-foreground">{item.label}</p>
             </div>
           ))}
         </div>

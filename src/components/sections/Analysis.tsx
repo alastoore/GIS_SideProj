@@ -31,19 +31,19 @@ const METRICS = [
 ];
 
 export const Analysis = () => (
-  <section id="analysis" className="bg-[#07101f] py-28">
+  <section id="analysis" className="bg-muted/40 py-28">
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
         <div>
           <SectionHeading index="03" label="About the data">
-            Public data, <em className="text-amber-200/90">transparent method.</em>
+            Public data, <em className="text-amber-600 dark:text-amber-200/90">transparent method.</em>
           </SectionHeading>
-          <p className="mt-6 text-lg leading-8 text-slate-400">
+          <p className="mt-6 text-lg leading-8 text-muted-foreground">
             Every barangay is scored on healthcare accessibility and ranked as a percentile
             (0–100) across the province, then grouped into five equal access levels. No
             black-box models — the same numbers behind every chart and map view on this page.
           </p>
-          <p className="mt-6 text-sm leading-6 text-slate-500">
+          <p className="mt-6 text-sm leading-6 text-muted-foreground/80">
             Population: PSA 2020 Census of Population and Housing, joined per barangay via
             PSGC codes. Facility counts: DOH records. Mapped facility locations:
             OpenStreetMap contributors. Boundaries: PSA administrative boundaries.
@@ -52,12 +52,12 @@ export const Analysis = () => (
 
         <div className="grid grid-cols-2 gap-x-8 gap-y-10">
           {METRICS.map((m) => (
-            <div key={m.label} className="border-t border-white/10 pt-5">
+            <div key={m.label} className="border-t border-foreground/15 pt-5">
               <p className="font-mono text-4xl text-foreground">
                 {m.value}
-                <span className="text-xl text-slate-500">{m.unit}</span>
+                <span className="text-xl text-muted-foreground">{m.unit}</span>
               </p>
-              <p className="mt-2 text-sm leading-5 text-slate-500">{m.label}</p>
+              <p className="mt-2 text-sm leading-5 text-muted-foreground">{m.label}</p>
             </div>
           ))}
         </div>

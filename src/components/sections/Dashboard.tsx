@@ -94,20 +94,20 @@ const muniChartConfig = {
 } satisfies ChartConfig;
 
 export const Dashboard = () => (
-  <section id="dashboard" className="bg-[#060c18] py-28">
+  <section id="dashboard" className="bg-background py-28">
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div className="mb-12">
         <SectionHeading index="01" label="Analytics">
-          The access gap, <em className="text-amber-200/90">in numbers.</em>
+          The access gap, <em className="text-amber-600 dark:text-amber-200/90">in numbers.</em>
         </SectionHeading>
-        <p className="mt-4 max-w-xl text-lg text-slate-400">
+        <p className="mt-4 max-w-xl text-lg text-muted-foreground">
           Computed live from the same dataset behind the map — PSA 2020 census population and
           per-barangay accessibility percentiles.
         </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-2xl bg-[#0a1628]/40 ring-white/6">
+        <Card className="rounded-2xl bg-card/50 ring-border">
           <CardHeader>
             <CardTitle>Population by access level</CardTitle>
             <CardDescription>2020 census population per accessibility quintile</CardDescription>
@@ -115,21 +115,21 @@ export const Dashboard = () => (
           <CardContent>
             <ChartContainer config={categoryChartConfig} className="h-64 w-full">
               <BarChart data={categoryData} margin={{ top: 16 }}>
-                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" />
+                <CartesianGrid vertical={false} stroke="var(--border)" />
                 <XAxis
                   dataKey="category"
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fill: '#64748b', fontSize: 11 }}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
-                  tick={{ fill: '#64748b', fontSize: 11 }}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                   tickFormatter={(v) => compact.format(v)}
                 />
                 <ChartTooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                  cursor={{ fill: 'var(--border)' }}
                   content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="population" radius={[6, 6, 0, 0]}>
@@ -142,7 +142,7 @@ export const Dashboard = () => (
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl bg-[#0a1628]/40 ring-white/6">
+        <Card className="rounded-2xl bg-card/50 ring-border">
           <CardHeader>
             <CardTitle>Mapped facilities by type</CardTitle>
             <CardDescription>Geocoded markers from OpenStreetMap</CardDescription>
@@ -157,7 +157,7 @@ export const Dashboard = () => (
                   nameKey="type"
                   innerRadius={50}
                   strokeWidth={2}
-                  stroke="#0a1628"
+                  stroke="var(--card)"
                 />
                 <ChartLegend content={<ChartLegendContent nameKey="type" />} />
               </PieChart>
@@ -165,7 +165,7 @@ export const Dashboard = () => (
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl bg-[#0a1628]/40 ring-white/6">
+        <Card className="rounded-2xl bg-card/50 ring-border">
           <CardHeader>
             <CardTitle>Most underserved municipalities</CardTitle>
             <CardDescription>Lowest average barangay access rank (0–100)</CardDescription>
@@ -173,7 +173,7 @@ export const Dashboard = () => (
           <CardContent>
             <ChartContainer config={muniChartConfig} className="h-64 w-full">
               <BarChart data={muniData} layout="vertical" margin={{ left: 8, right: 28 }}>
-                <CartesianGrid horizontal={false} stroke="rgba(255,255,255,0.06)" />
+                <CartesianGrid horizontal={false} stroke="var(--border)" />
                 <XAxis type="number" hide />
                 <YAxis
                   type="category"
@@ -181,17 +181,17 @@ export const Dashboard = () => (
                   tickLine={false}
                   axisLine={false}
                   width={104}
-                  tick={{ fill: '#94a3b8', fontSize: 11 }}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                 />
                 <ChartTooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                  cursor={{ fill: 'var(--border)' }}
                   content={<ChartTooltipContent />}
                 />
                 <Bar dataKey="avgRank" fill="#f97316" radius={4}>
                   <LabelList
                     dataKey="avgRank"
                     position="right"
-                    className="fill-slate-400"
+                    fill="var(--muted-foreground)"
                     fontSize={11}
                   />
                 </Bar>

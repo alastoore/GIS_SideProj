@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, Moon, Sun, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
+import { useTheme } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
 
 export const Navbar = ({ scrolled }: { scrolled: boolean }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className={cn(
@@ -15,25 +17,33 @@ export const Navbar = ({ scrolled }: { scrolled: boolean }) => {
       <div className={cn(
         "mx-auto max-w-6xl px-4 sm:px-6 transition-all duration-300",
         scrolled
-          ? "rounded-none border-b border-white/8 bg-[#060c18]/95 backdrop-blur-md"
-          : "rounded-2xl border border-white/8 bg-[#060c18]/70 backdrop-blur-xl"
+          ? "rounded-none border-b border-border bg-background/95 backdrop-blur-md"
+          : "rounded-2xl border border-border bg-background/70 backdrop-blur-xl"
       )}>
         <div className="flex h-14 items-center justify-between">
           <a href="#top" className="flex items-center gap-3">
             <Logo className="h-8 w-8" />
             <div>
               <p className="text-sm font-semibold text-foreground leading-none">Health Access Cebu</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Barangay accessibility atlas</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Barangay accessibility atlas</p>
             </div>
           </a>
 
           <nav className="hidden md:flex items-center gap-6">
-            <a href="#dashboard" className="text-sm text-slate-400 transition-colors hover:text-white">Analytics</a>
-            <a href="#map" className="text-sm text-slate-400 transition-colors hover:text-white">Map</a>
-            <a href="#analysis" className="text-sm text-slate-400 transition-colors hover:text-white">Data</a>
+            <a href="#dashboard" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Analytics</a>
+            <a href="#map" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Map</a>
+            <a href="#analysis" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Data</a>
           </nav>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              onClick={toggleTheme}
+            >
+              {theme === 'dark' ? <Sun /> : <Moon />}
+            </Button>
             <Button size="sm" className="hidden md:inline-flex" asChild>
               <a href="#map">Explore the map</a>
             </Button>
@@ -52,10 +62,10 @@ export const Navbar = ({ scrolled }: { scrolled: boolean }) => {
 
       {menuOpen && (
         <div className="mx-auto max-w-6xl px-4 sm:px-6 md:hidden">
-          <div className="rounded-b-2xl border border-t-0 border-white/8 bg-[#060c18]/95 px-4 pb-4 pt-2 backdrop-blur-xl">
-            <a href="#dashboard" className="block rounded-xl px-4 py-3 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => setMenuOpen(false)}>Analytics</a>
-            <a href="#map" className="block rounded-xl px-4 py-3 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => setMenuOpen(false)}>Map</a>
-            <a href="#analysis" className="block rounded-xl px-4 py-3 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => setMenuOpen(false)}>Data</a>
+          <div className="rounded-b-2xl border border-t-0 border-border bg-background/95 px-4 pb-4 pt-2 backdrop-blur-xl">
+            <a href="#dashboard" className="block rounded-xl px-4 py-3 text-sm text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground" onClick={() => setMenuOpen(false)}>Analytics</a>
+            <a href="#map" className="block rounded-xl px-4 py-3 text-sm text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground" onClick={() => setMenuOpen(false)}>Map</a>
+            <a href="#analysis" className="block rounded-xl px-4 py-3 text-sm text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground" onClick={() => setMenuOpen(false)}>Data</a>
           </div>
         </div>
       )}

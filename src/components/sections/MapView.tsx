@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useMemo } from 'react';
+import { useRef, useCallback, useState, useMemo, useEffect } from 'react';
 import Map, { Source, Layer, Marker, Popup } from 'react-map-gl/mapbox';
 import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox';
 import type { FeatureCollection, Point } from 'geojson';
@@ -45,6 +45,7 @@ import {
 } from '@/lib/map-constants';
 import { pointInFeature } from '@/lib/geo';
 import { SectionHeading } from '@/components/section-heading';
+import { useTheme } from '@/components/theme-provider';
 import geojsonData from '../../assets/cebu_health_accessibility.geojson';
 import facilitiesData from '../../assets/cebu_health_facilities.geojson';
 import barangaySummary from '../../assets/barangay_summary.json';
@@ -187,7 +188,7 @@ const fillLayer: any = {
   },
 };
 
-const strokeLayer: any = {
+const makeStrokeLayer = (dark: boolean): any => ({
   id: 'barangay-stroke',
   type: 'line' as const,
   slot: 'middle',
@@ -200,7 +201,7 @@ const strokeLayer: any = {
         'case',
         ['boolean', ['feature-state', 'hover'], false],
         '#22d3ee',
-        'rgba(255,255,255,0.45)',
+        dark ? 'rgba(255,255,255,0.45)' : 'rgba(15,23,42,0.35)',
       ],
     ],
     'line-width': [
@@ -215,7 +216,7 @@ const strokeLayer: any = {
       ],
     ],
   },
-};
+});
 
 const facilityCircleLayer: any = {
   id: 'facility-circles',
@@ -248,7 +249,7 @@ const facilityCircleLayer: any = {
   },
 };
 
-const facilityLabelLayer: any = {
+const makeFacilityLabelLayer = (dark: boolean): any => ({
   id: 'facility-labels',
   type: 'symbol' as const,
   slot: 'top',
@@ -266,13 +267,15 @@ const facilityLabelLayer: any = {
     'text-optional': true,
   },
   paint: {
-    'text-color': '#ffffff',
-    'text-halo-color': 'rgba(0,0,0,0.7)',
+    'text-color': dark ? '#ffffff' : '#0f172a',
+    'text-halo-color': dark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)',
     'text-halo-width': 1.2,
   },
-};
+});
 
 export const MapView = () => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const mapRef = useRef<MapRef>(null);
   const hoveredId = useRef<string | number | null>(null);
   const clickedId = useRef<string | number | null>(null);
@@ -325,6 +328,20 @@ export const MapView = () => {
     () => ['in', ['get', 'type'], ['literal', activeTypes]] as any,
     [activeTypes]
   );
+
+  const strokeLayer = useMemo(() => makeStrokeLayer(isDark), [isDark]);
+  const facilityLabelLayer = useMemo(() => makeFacilityLabelLayer(isDark), [isDark]);
+
+  // Match the basemap lighting to the page theme.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !map.isStyleLoaded()) return;
+    try {
+      map.setConfigProperty('basemap', 'lightPreset', isDark ? 'dusk' : 'day');
+    } catch {
+      // style not ready yet — onLoad will apply it
+    }
+  }, [isDark]);
 
   const toggleType = (type: string) => {
     setActiveTypes((prev) =>
@@ -512,20 +529,20 @@ export const MapView = () => {
 
     // Mapbox Standard ships its own 3D buildings and landmarks;
     // configure the basemap instead of adding a custom building layer.
-    map.setConfigProperty('basemap', 'lightPreset', 'dusk');
+    map.setConfigProperty('basemap', 'lightPreset', isDark ? 'dusk' : 'day');
     map.setConfigProperty('basemap', 'show3dObjects', true);
-  }, []);
+  }, [isDark]);
 
   const activePopup = pinnedPopup ?? popup;
 
   return (
-    <section id="map" className="bg-[#060c18] py-28">
+    <section id="map" className="bg-background py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mb-10">
           <SectionHeading index="02" label="Coverage map">
             Every barangay, <em className="text-amber-200/90">on the map.</em>
           </SectionHeading>
-          <p className="mt-4 max-w-xl text-lg text-slate-400">
+          <p className="mt-4 max-w-xl text-lg text-muted-foreground">
             Barangays colored by accessibility percentile, with healthcare facility markers.
             Click a barangay to pin details, a facility for its drive-time reach — or test a
             new location with what-if placement.
@@ -539,7 +556,7 @@ export const MapView = () => {
                 variant="outline"
                 role="combobox"
                 aria-expanded={searchOpen}
-                className="w-64 justify-between text-slate-400"
+                className="w-64 justify-between text-muted-foreground"
               >
                 <span className="flex items-center gap-2">
                   <Search className="size-3.5" />
@@ -585,12 +602,12 @@ export const MapView = () => {
           </Button>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500">Lower access</span>
+            <span className="text-xs text-muted-foreground">Lower access</span>
             <div
               className="h-2 w-40 rounded-full"
               style={{ background: 'linear-gradient(to right, #dc2626, #facc15, #22c55e)' }}
             />
-            <span className="text-xs text-slate-500">Higher access</span>
+            <span className="text-xs text-muted-foreground">Higher access</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -603,13 +620,13 @@ export const MapView = () => {
                   variant="outline"
                   className={
                     active
-                      ? 'cursor-pointer gap-1.5 border-white/15 text-slate-300'
-                      : 'cursor-pointer gap-1.5 border-white/5 text-slate-600 opacity-50'
+                      ? 'cursor-pointer gap-1.5 border-border text-foreground/80'
+                      : 'cursor-pointer gap-1.5 border-border/60 text-muted-foreground/60 opacity-50'
                   }
                 >
                   <button type="button" onClick={() => toggleType(label)} aria-pressed={active}>
                     <span
-                      className="inline-block h-2.5 w-2.5 rounded-full border border-white/40"
+                      className="inline-block h-2.5 w-2.5 rounded-full border border-foreground/30"
                       style={{ backgroundColor: active ? FACILITY_COLORS[label] : 'transparent' }}
                     />
                     {label}
@@ -621,7 +638,7 @@ export const MapView = () => {
         </div>
 
         <div
-          className="relative overflow-hidden rounded-3xl border border-white/8"
+          className="relative overflow-hidden rounded-3xl border border-border"
           style={{ height: '560px' }}
         >
             <Map
@@ -686,40 +703,40 @@ export const MapView = () => {
                   setPinnedPopup(null);
                 }}
               >
-                <Card size="sm" className="min-w-44 rounded-xl bg-[#0a1628] shadow-xl ring-white/10">
+                <Card size="sm" className="min-w-44 rounded-xl bg-popover shadow-xl ring-border">
                   <CardContent>
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold text-white">
+                      <p className="font-semibold text-foreground">
                         {activePopup.properties.adm4_name}
                       </p>
                       {pinnedPopup && (
-                        <Badge className="bg-fuchsia-500/15 text-[10px] font-semibold uppercase tracking-widest text-fuchsia-300">
+                        <Badge className="bg-fuchsia-500/15 text-[10px] font-semibold uppercase tracking-widest text-fuchsia-700 dark:text-fuchsia-300">
                           Selected
                         </Badge>
                       )}
                     </div>
-                    <div className="mt-2 space-y-1 text-xs text-slate-400">
+                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                       <p>
                         Access rank:{' '}
-                        <span className="font-mono text-cyan-400">
+                        <span className="font-mono text-primary">
                           {Math.round(activePopup.properties.access_rank)}/100
                         </span>
                       </p>
                       <p>
                         Population:{' '}
-                        <span className="font-mono text-white">
+                        <span className="font-mono text-foreground">
                           {(activePopup.properties.population ?? 0).toLocaleString()}
                         </span>
                       </p>
                       <p>
                         Facilities:{' '}
-                        <span className="font-mono text-white">
+                        <span className="font-mono text-foreground">
                           {activePopup.properties.facilities ?? 0}
                         </span>
                       </p>
                       <p>
                         Per 10k:{' '}
-                        <span className="font-mono text-white">
+                        <span className="font-mono text-foreground">
                           {activePopup.properties.facilities_per_10k > 0
                             ? activePopup.properties.facilities_per_10k.toFixed(2)
                             : '0'}
@@ -729,7 +746,7 @@ export const MapView = () => {
                         Category:{' '}
                         <Badge
                           variant="outline"
-                          className={CATEGORY_STYLES[activePopup.properties.access_category] ?? 'border-white/15 text-slate-400'}
+                          className={CATEGORY_STYLES[activePopup.properties.access_category] ?? 'border-border text-muted-foreground'}
                         >
                           {activePopup.properties.access_category}
                         </Badge>
@@ -743,28 +760,28 @@ export const MapView = () => {
 
           {/* Overlay: hint, loading, and isochrone result cards */}
           {placementMode && !isoState && !isoLoading && (
-            <Card size="sm" className="absolute left-4 top-4 z-10 bg-[#0a1628]/90 ring-white/10 backdrop-blur">
-              <CardContent className="text-xs text-slate-300">
+            <Card size="sm" className="absolute left-4 top-4 z-10 bg-popover/90 ring-border backdrop-blur">
+              <CardContent className="text-xs text-foreground/80">
                 Click anywhere on the map to test a facility location.
               </CardContent>
             </Card>
           )}
 
           {isoLoading && (
-            <Card size="sm" className="absolute left-4 top-4 z-10 bg-[#0a1628]/90 ring-white/10 backdrop-blur">
-              <CardContent className="flex items-center gap-2 text-xs text-slate-300">
-                <Loader2 className="size-3.5 animate-spin text-cyan-400" />
+            <Card size="sm" className="absolute left-4 top-4 z-10 bg-popover/90 ring-border backdrop-blur">
+              <CardContent className="flex items-center gap-2 text-xs text-foreground/80">
+                <Loader2 className="size-3.5 animate-spin text-primary" />
                 Calculating drive times…
               </CardContent>
             </Card>
           )}
 
           {isoState && !isoLoading && (
-            <Card size="sm" className="absolute left-4 top-4 z-10 max-w-72 bg-[#0a1628]/90 ring-white/10 backdrop-blur">
+            <Card size="sm" className="absolute left-4 top-4 z-10 max-w-72 bg-popover/90 ring-border backdrop-blur">
               <CardContent>
                 <div className="flex items-start justify-between gap-3">
-                  <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                    <Timer className="size-3.5 shrink-0 text-cyan-400" />
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    <Timer className="size-3.5 shrink-0 text-primary" />
                     {isoState.label}
                   </p>
                   <Button
@@ -778,14 +795,14 @@ export const MapView = () => {
                 </div>
 
                 {isoState.kind === 'facility' ? (
-                  <div className="mt-2 space-y-1.5 text-xs text-slate-400">
+                  <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
                     <p>Drive-time coverage from this facility:</p>
                     <div className="flex flex-wrap gap-1.5">
                       {isoState.minutes.map((m) => (
                         <Badge
                           key={m}
                           variant="outline"
-                          className="gap-1.5 border-white/10 text-slate-300"
+                          className="gap-1.5 border-border text-foreground/80"
                         >
                           <span
                             className="inline-block h-2.5 w-2.5 rounded-full"
@@ -798,23 +815,23 @@ export const MapView = () => {
                   </div>
                 ) : (
                   isoState.stats && (
-                    <div className="mt-2 space-y-1 text-xs text-slate-400">
+                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                       <p>
                         Within a 30-minute drive:{' '}
-                        <span className="font-mono text-white">
+                        <span className="font-mono text-foreground">
                           {isoState.stats.barangays}
                         </span>{' '}
                         barangays,{' '}
-                        <span className="font-mono text-white">
+                        <span className="font-mono text-foreground">
                           {isoState.stats.population.toLocaleString()}
                         </span>{' '}
                         residents.
                       </p>
                       <p>
                         Including{' '}
-                        <span className="font-mono text-red-400">{isoState.stats.veryLow}</span>{' '}
+                        <span className="font-mono text-red-500 dark:text-red-400">{isoState.stats.veryLow}</span>{' '}
                         very-low-access barangays (
-                        <span className="font-mono text-red-400">
+                        <span className="font-mono text-red-500 dark:text-red-400">
                           {isoState.stats.veryLowPop.toLocaleString()}
                         </span>{' '}
                         residents) that would gain coverage.
@@ -827,15 +844,15 @@ export const MapView = () => {
           )}
         </div>
 
-        <Card className="mt-8 rounded-2xl bg-[#0a1628]/40 ring-white/6">
-          <CardHeader className="border-b border-white/5 pb-4">
+        <Card className="mt-8 rounded-2xl bg-card/50 ring-border">
+          <CardHeader className="border-b border-border/60 pb-4">
             <CardTitle className="font-display text-xl">Barangay explorer</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-muted-foreground">
               Search, sort, and click any of the {SUMMARY.length.toLocaleString()} barangays to
               locate it on the map.
             </CardDescription>
             <div className="relative mt-3 max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={tableQuery}
                 onChange={(e) => {
@@ -844,14 +861,14 @@ export const MapView = () => {
                 }}
                 placeholder="Filter by barangay or municipality…"
                 aria-label="Filter barangays by name or municipality"
-                className="h-9 border-white/10 bg-white/5 pl-9 text-sm placeholder:text-slate-600"
+                className="h-9 border-border bg-foreground/5 pl-9 text-sm placeholder:text-muted-foreground/60"
               />
             </div>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow className="border-white/8 hover:bg-transparent">
+                <TableRow className="border-border hover:bg-transparent">
                   {(
                     [
                       ['name', 'Barangay', 'text-left'],
@@ -864,7 +881,7 @@ export const MapView = () => {
                   ).map(([key, label, align]) => (
                     <TableHead
                       key={label}
-                      className={`text-xs uppercase tracking-wider text-slate-400 ${align}`}
+                      className={`text-xs uppercase tracking-wider text-muted-foreground ${align}`}
                       aria-sort={
                         key === sortKey
                           ? sortDir === 1
@@ -877,15 +894,15 @@ export const MapView = () => {
                         <button
                           type="button"
                           aria-label={`Sort by ${label.toLowerCase()}`}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400/60"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                           onClick={() => toggleSort(key)}
                         >
                           {label}
                           {sortKey === key ? (
                             sortDir === 1 ? (
-                              <ChevronUp className="size-3.5 text-cyan-400" />
+                              <ChevronUp className="size-3.5 text-primary" />
                             ) : (
-                              <ChevronDown className="size-3.5 text-cyan-400" />
+                              <ChevronDown className="size-3.5 text-primary" />
                             )
                           ) : (
                             <ArrowUpDown className="size-3 opacity-40" />
@@ -900,8 +917,8 @@ export const MapView = () => {
               </TableHeader>
               <TableBody>
                 {pageRows.length === 0 && (
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">
+                  <TableRow className="border-border/60 hover:bg-transparent">
+                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                       No barangay matches “{tableQuery}” — try a different spelling.
                     </TableCell>
                   </TableRow>
@@ -911,7 +928,7 @@ export const MapView = () => {
                     key={b.id}
                     tabIndex={0}
                     aria-label={`Show ${b.name}, ${b.municipality ?? 'Cebu'} on the map`}
-                    className="cursor-pointer border-white/5 odd:bg-white/[0.02] hover:bg-cyan-500/5 focus-visible:bg-cyan-500/5 focus-visible:outline-none"
+                    className="cursor-pointer border-border/60 odd:bg-foreground/[0.03] hover:bg-cyan-500/5 focus-visible:bg-cyan-500/5 focus-visible:outline-none"
                     onClick={() => selectBarangay(b)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -921,12 +938,12 @@ export const MapView = () => {
                     }}
                   >
                     <TableCell className="font-medium text-foreground">{b.name}</TableCell>
-                    <TableCell className="text-slate-400">{b.municipality}</TableCell>
+                    <TableCell className="text-muted-foreground">{b.municipality}</TableCell>
                     <TableCell className="text-right">
                       <span className="inline-flex items-center justify-end gap-2.5">
                         <span className="font-mono text-foreground">{b.rank.toFixed(1)}</span>
                         <span
-                          className="h-1.5 w-14 overflow-hidden rounded-full bg-white/10"
+                          className="h-1.5 w-14 overflow-hidden rounded-full bg-foreground/10"
                           aria-hidden="true"
                         >
                           <span
@@ -942,15 +959,15 @@ export const MapView = () => {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={CATEGORY_STYLES[b.category] ?? 'border-white/15 text-slate-400'}
+                        className={CATEGORY_STYLES[b.category] ?? 'border-border text-muted-foreground'}
                       >
                         {b.category.replace(' Access', '')}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-mono text-slate-300">
+                    <TableCell className="text-right font-mono text-foreground/80">
                       {b.population.toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-slate-300">
+                    <TableCell className="text-right font-mono text-foreground/80">
                       {b.facilities}
                     </TableCell>
                   </TableRow>
@@ -958,7 +975,7 @@ export const MapView = () => {
               </TableBody>
             </Table>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {sortedRows.length === 0
                   ? 'No matches'
                   : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, sortedRows.length)} of ${sortedRows.length.toLocaleString()}`}
@@ -974,7 +991,7 @@ export const MapView = () => {
                 >
                   <ChevronLeft /> Prev
                 </Button>
-                <span className="font-mono text-xs text-slate-400">
+                <span className="font-mono text-xs text-muted-foreground">
                   {page + 1} / {pageCount}
                 </span>
                 <Button

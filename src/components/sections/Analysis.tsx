@@ -1,5 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { SectionHeading } from '@/components/section-heading';
 import barangaySummary from '../../assets/barangay_summary.json';
 
 interface BarangaySummary {
@@ -13,21 +12,22 @@ interface BarangaySummary {
 const SUMMARY = barangaySummary as BarangaySummary[];
 
 // Real metrics derived from the barangay dataset at module load.
-const totalPopulation = SUMMARY.reduce((acc, b) => acc + b.population, 0);
-const totalFacilities = SUMMARY.reduce((acc, b) => acc + b.facilities, 0);
+const totalPopulation = SUMMARY.reduce((acc, b) => acc + (b.population ?? 0), 0);
 const veryLowPopulation = SUMMARY
   .filter((b) => b.category === 'Very Low Access')
-  .reduce((acc, b) => acc + b.population, 0);
+  .reduce((acc, b) => acc + (b.population ?? 0), 0);
 const veryLowShare = Math.round((veryLowPopulation / totalPopulation) * 100);
 const noFacilityShare = Math.round(
   (SUMMARY.filter((b) => b.facilities === 0).length / SUMMARY.length) * 100
 );
+const perTenK = SUMMARY.map((b) => b.facilities_per_10k ?? 0).sort((a, b) => a - b);
+const medianPer10k = perTenK[Math.floor(perTenK.length / 2)].toFixed(1);
 
 const METRICS = [
-  { value: SUMMARY.length.toLocaleString(), unit: '', label: 'Barangays analyzed' },
-  { value: totalFacilities.toLocaleString(), unit: '', label: 'Health facilities on record' },
-  { value: String(veryLowShare), unit: '%', label: 'Population in very-low-access areas' },
-  { value: String(noFacilityShare), unit: '%', label: 'Barangays with no facility' },
+  { value: SUMMARY.length.toLocaleString(), unit: '', label: 'barangays ranked by accessibility' },
+  { value: String(veryLowShare), unit: '%', label: 'of the population lives in very-low-access areas' },
+  { value: String(noFacilityShare), unit: '%', label: 'of barangays have no facility of their own' },
+  { value: medianPer10k, unit: '/10k', label: 'median facilities per 10,000 residents' },
 ];
 
 export const Analysis = () => (
@@ -35,36 +35,30 @@ export const Analysis = () => (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
       <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400">
-            Accessibility analytics
-          </p>
-          <h2 className="mt-4 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            Insights that help planners act faster.
-          </h2>
+          <SectionHeading index="03" label="About the data">
+            Public data, <em className="text-amber-200/90">transparent method.</em>
+          </SectionHeading>
           <p className="mt-6 text-lg leading-8 text-slate-400">
-            Compare coverage across municipalities, surface resource gaps, and model what-if scenarios with transparent scores — not black-box outputs.
+            Every barangay is scored on healthcare accessibility and ranked as a percentile
+            (0–100) across the province, then grouped into five equal access levels. No
+            black-box models — the same numbers behind every chart and map view on this page.
           </p>
-          <Separator className="mt-8 max-w-16 bg-cyan-500/40" />
-          <p className="mt-6 text-sm text-slate-500">
-            Population: PSA 2020 Census of Population and Housing. Facility counts: DOH records
-            in the source dataset. Map markers: OpenStreetMap.
+          <p className="mt-6 text-sm leading-6 text-slate-500">
+            Population: PSA 2020 Census of Population and Housing, joined per barangay via
+            PSGC codes. Facility counts: DOH records. Mapped facility locations:
+            OpenStreetMap contributors. Boundaries: PSA administrative boundaries.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-10">
           {METRICS.map((m) => (
-            <Card
-              key={m.label}
-              className="rounded-3xl bg-[#060c18] ring-white/8 transition hover:ring-cyan-500/20"
-            >
-              <CardContent>
-                <p className="font-mono text-4xl font-semibold text-white">
-                  {m.value}
-                  <span className="text-xl text-slate-500">{m.unit}</span>
-                </p>
-                <p className="mt-3 text-sm text-slate-500">{m.label}</p>
-              </CardContent>
-            </Card>
+            <div key={m.label} className="border-t border-white/10 pt-5">
+              <p className="font-mono text-4xl text-foreground">
+                {m.value}
+                <span className="text-xl text-slate-500">{m.unit}</span>
+              </p>
+              <p className="mt-2 text-sm leading-5 text-slate-500">{m.label}</p>
+            </div>
           ))}
         </div>
       </div>

@@ -117,4 +117,8 @@ writeFileSync(
   new URL('../src/assets/cebu_health_facilities.geojson', import.meta.url),
   JSON.stringify({ type: 'FeatureCollection', features })
 );
-console.log('Saved src/assets/cebu_health_facilities.geojson');
+writeFileSync(
+  new URL('../src/assets/facility_type_counts.json', import.meta.url),
+  JSON.stringify(counts)
+);
+console.log('Saved src/assets/cebu_health_facilities.geojson and facility_type_counts.json');

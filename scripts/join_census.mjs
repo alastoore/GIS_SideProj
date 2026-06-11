@@ -150,6 +150,11 @@ function nearestRef(pt) {
 const data = JSON.parse(readFileSync(GEOJSON, 'utf8'));
 let matchedPip = 0, matchedNearest = 0, noPop = 0, nameMismatch = 0;
 const norm = (s) => (s ?? '').toLowerCase().replace(/\(pob\.?\)/g, '').replace(/[^a-z0-9]/g, '');
+const titleCase = (s) =>
+  (s ?? '')
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (c) => c.toUpperCase())
+    .replace(/\bOf\b/g, 'of');
 
 for (const f of data.features) {
   const box = bbox(f.geometry);
@@ -163,6 +168,9 @@ for (const f of data.features) {
     const code = ref.properties.ADM4_PCODE.replace('PH', '');
     pop = popByCode.get(code) ?? null;
     if (norm(ref.properties.ADM4_EN) !== norm(f.properties.adm4_name)) nameMismatch++;
+    f.properties.municipality = titleCase(ref.properties.ADM3_EN);
+  } else {
+    f.properties.municipality = null;
   }
   if (pop === null) noPop++;
 

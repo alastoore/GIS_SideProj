@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/newsreader/opsz.css";
+@import "@fontsource-variable/newsreader/opsz-italic.css";
+@import "@fontsource-variable/sometype-mono";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -27,6 +30,8 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Newsreader Variable", Georgia, serif;
+  --font-mono: "Sometype Mono Variable", ui-monospace, "Cascadia Mono", monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -39,11 +44,11 @@
   color-scheme: dark;
   --radius: 0.75rem;
   --background: #060c18;
-  --foreground: #f8fafc;
+  --foreground: #ede9e3;
   --card: #0a1628;
-  --card-foreground: #f8fafc;
+  --card-foreground: #ede9e3;
   --popover: #0a1628;
-  --popover-foreground: #f8fafc;
+  --popover-foreground: #ede9e3;
   --primary: #22d3ee;
   --primary-foreground: #020617;
   --secondary: #1e293b;
@@ -57,6 +62,18 @@
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
   --ring: rgba(34, 211, 238, 0.4);
+}
+
+html {
+  scroll-behavior: smooth;
+  /* keep anchored sections clear of the fixed navbar */
+  scroll-padding-top: 5.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 html,
@@ -75,17 +92,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-@keyframes grid-drift {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(40px, 40px); }
+::selection {
+  background: rgba(34, 211, 238, 0.25);
+  color: #ede9e3;
 }
 
-.animate-grid-drift {
-  animation: grid-drift 8s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-grid-drift {
-    animation: none;
-  }
-}

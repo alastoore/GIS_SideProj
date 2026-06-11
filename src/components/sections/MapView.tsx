@@ -1,8 +1,20 @@
 import { useRef, useCallback, useState, useMemo } from 'react';
-import Map, { Source, Layer, Popup } from 'react-map-gl/mapbox';
+import Map, { Source, Layer, Marker, Popup } from 'react-map-gl/mapbox';
 import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox';
-import type { FeatureCollection } from 'geojson';
-import { ChevronsUpDown, Search } from 'lucide-react';
+import type { FeatureCollection, Point } from 'geojson';
+import {
+  ArrowUpDown,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  ChevronUp,
+  CirclePlus,
+  Loader2,
+  Search,
+  Timer,
+  X,
+} from 'lucide-react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +27,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Table,
@@ -24,6 +37,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  CATEGORY_COLORS,
+  CATEGORY_STYLES,
+  FACILITY_COLORS,
+  FACILITY_TYPES,
+} from '@/lib/map-constants';
+import { pointInFeature } from '@/lib/geo';
+import { SectionHeading } from '@/components/section-heading';
 import geojsonData from '../../assets/cebu_health_accessibility.geojson';
 import facilitiesData from '../../assets/cebu_health_facilities.geojson';
 import barangaySummary from '../../assets/barangay_summary.json';
@@ -50,6 +71,7 @@ interface BarangayProps {
 interface BarangaySummary {
   id: number;
   name: string;
+  municipality: string | null;
   rank: number;
   category: string;
   population: number;
@@ -58,6 +80,76 @@ interface BarangaySummary {
   centroid: [number, number];
 }
 
+type SortKey = 'rank' | 'name' | 'municipality' | 'population' | 'facilities';
+const PAGE_SIZE = 15;
+
+// Drive-time contour colors (cool hues, distinct from the choropleth).
+const ISO_COLORS: Record<number, string> = {
+  15: '#22d3ee',
+  30: '#3b82f6',
+  60: '#8b5cf6',
+};
+
+interface IsoState {
+  kind: 'facility' | 'placement';
+  label: string;
+  point: [number, number];
+  data: FeatureCollection;
+  minutes: number[];
+  stats?: {
+    barangays: number;
+    population: number;
+    veryLow: number;
+    veryLowPop: number;
+  };
+}
+
+async function fetchIsochrone(
+  lng: number,
+  lat: number,
+  minutes: number[]
+): Promise<FeatureCollection> {
+  const url =
+    `https://api.mapbox.com/isochrone/v1/mapbox/driving/${lng},${lat}` +
+    `?contours_minutes=${minutes.join(',')}&polygons=true&denoise=1&access_token=${MAPBOX_TOKEN}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Isochrone request failed: ${res.status}`);
+  return res.json();
+}
+
+const isoFillLayer: any = {
+  id: 'iso-fill',
+  type: 'fill' as const,
+  slot: 'middle',
+  paint: {
+    'fill-color': [
+      'match', ['get', 'contour'],
+      15, ISO_COLORS[15],
+      30, ISO_COLORS[30],
+      60, ISO_COLORS[60],
+      '#3b82f6',
+    ],
+    'fill-opacity': 0.18,
+  },
+};
+
+const isoLineLayer: any = {
+  id: 'iso-line',
+  type: 'line' as const,
+  slot: 'middle',
+  paint: {
+    'line-color': [
+      'match', ['get', 'contour'],
+      15, ISO_COLORS[15],
+      30, ISO_COLORS[30],
+      60, ISO_COLORS[60],
+      '#3b82f6',
+    ],
+    'line-width': 1.5,
+    'line-dasharray': [2, 1],
+  },
+};
+
 const SUMMARY = barangaySummary as BarangaySummary[];
 
 interface PopupInfo {
@@ -65,14 +157,6 @@ interface PopupInfo {
   latitude: number;
   properties: BarangayProps;
 }
-
-const CATEGORY_STYLES: Record<string, string> = {
-  'Very Low Access': 'border-red-500/30 text-red-400',
-  'Low Access': 'border-orange-500/30 text-orange-400',
-  'Moderate Access': 'border-yellow-500/30 text-yellow-400',
-  'High Access': 'border-lime-500/30 text-lime-400',
-  'Very High Access': 'border-green-500/30 text-green-400',
-};
 
 // Flat choropleth — color driven by access_rank percentile (0-100), with
 // hover/click highlight colors via feature-state.
@@ -132,16 +216,6 @@ const strokeLayer: any = {
     ],
   },
 };
-
-// Cool hues so markers stay readable on the warm red-to-green choropleth.
-const FACILITY_COLORS: Record<string, string> = {
-  Hospital: '#3b82f6',
-  Clinic: '#a855f7',
-  'Health Center': '#f8fafc',
-  'Birthing Center': '#f472b6',
-};
-
-const FACILITY_TYPES = Object.keys(FACILITY_COLORS);
 
 const facilityCircleLayer: any = {
   id: 'facility-circles',
@@ -206,11 +280,46 @@ export const MapView = () => {
   const [pinnedPopup, setPinnedPopup] = useState<PopupInfo | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [activeTypes, setActiveTypes] = useState<string[]>(FACILITY_TYPES);
+  const [placementMode, setPlacementMode] = useState(false);
+  const [isoState, setIsoState] = useState<IsoState | null>(null);
+  const [isoLoading, setIsoLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('rank');
+  const [sortDir, setSortDir] = useState<1 | -1>(1);
+  const [page, setPage] = useState(0);
+  const [tableQuery, setTableQuery] = useState('');
 
-  const underserved = useMemo(
-    () => [...SUMMARY].sort((a, b) => a.rank - b.rank).slice(0, 15),
-    []
-  );
+  const sortedRows = useMemo(() => {
+    const q = tableQuery.trim().toLowerCase();
+    const rows = q
+      ? SUMMARY.filter(
+          (b) =>
+            b.name.toLowerCase().includes(q) ||
+            (b.municipality ?? '').toLowerCase().includes(q)
+        )
+      : SUMMARY;
+    return [...rows].sort((a, b) => {
+      const va = a[sortKey] ?? '';
+      const vb = b[sortKey] ?? '';
+      const cmp =
+        typeof va === 'number' && typeof vb === 'number'
+          ? va - vb
+          : String(va).localeCompare(String(vb));
+      return cmp * sortDir;
+    });
+  }, [sortKey, sortDir, tableQuery]);
+
+  const pageCount = Math.max(1, Math.ceil(sortedRows.length / PAGE_SIZE));
+  const pageRows = sortedRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const toggleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === 1 ? -1 : 1));
+    } else {
+      setSortKey(key);
+      setSortDir(1);
+    }
+    setPage(0);
+  };
 
   const facilityFilter = useMemo(
     () => ['in', ['get', 'type'], ['literal', activeTypes]] as any,
@@ -264,7 +373,8 @@ export const MapView = () => {
 
   const onMouseMove = useCallback((e: MapMouseEvent) => {
     const map = mapRef.current?.getMap();
-    if (!map || !e.features?.length) return;
+    const feature = e.features?.find((f) => f.layer?.id === 'barangay-fill');
+    if (!map || !feature) return;
 
     if (hoveredId.current !== null) {
       map.setFeatureState(
@@ -273,7 +383,6 @@ export const MapView = () => {
       );
     }
 
-    const feature = e.features[0];
     hoveredId.current = feature.id ?? null;
 
     if (hoveredId.current !== null) {
@@ -305,19 +414,81 @@ export const MapView = () => {
     if (clickedId.current === null) setPopup(null);
   }, []);
 
-  const onClick = useCallback((e: MapMouseEvent) => {
+  // Barangays whose centroid falls inside any isochrone contour.
+  const computeCoverage = (iso: FeatureCollection): IsoState['stats'] => {
+    let barangays = 0, population = 0, veryLow = 0, veryLowPop = 0;
+    for (const b of SUMMARY) {
+      const inside = iso.features.some((f) => pointInFeature(b.centroid, f.geometry));
+      if (!inside) continue;
+      barangays += 1;
+      population += b.population ?? 0;
+      if (b.category === 'Very Low Access') {
+        veryLow += 1;
+        veryLowPop += b.population ?? 0;
+      }
+    }
+    return { barangays, population, veryLow, veryLowPop };
+  };
+
+  const onClick = useCallback(async (e: MapMouseEvent) => {
     const map = mapRef.current?.getMap();
-    if (!map) return;
+    if (!map || MAPBOX_TOKEN_MISSING) return;
+
+    // What-if mode: any click tests a hypothetical facility location.
+    if (placementMode) {
+      const { lng, lat } = e.lngLat;
+      setIsoLoading(true);
+      try {
+        const iso = await fetchIsochrone(lng, lat, [30]);
+        setIsoState({
+          kind: 'placement',
+          label: 'Hypothetical facility',
+          point: [lng, lat],
+          data: iso,
+          minutes: [30],
+          stats: computeCoverage(iso),
+        });
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsoLoading(false);
+      }
+      return;
+    }
+
+    // Clicking a facility marker shows its drive-time coverage.
+    const facility = e.features?.find((f) => f.layer?.id === 'facility-circles');
+    if (facility) {
+      const [lng, lat] = (facility.geometry as Point).coordinates;
+      const label =
+        (facility.properties?.name as string) || (facility.properties?.type as string);
+      setIsoLoading(true);
+      try {
+        const iso = await fetchIsochrone(lng, lat, [15, 30, 60]);
+        setIsoState({
+          kind: 'facility',
+          label,
+          point: [lng, lat],
+          data: iso,
+          minutes: [15, 30, 60],
+        });
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsoLoading(false);
+      }
+      return;
+    }
 
     clearClicked();
 
-    if (!e.features?.length) {
+    const feature = e.features?.find((f) => f.layer?.id === 'barangay-fill');
+    if (!feature) {
       setPinnedPopup(null);
       setPopup(null);
       return;
     }
 
-    const feature = e.features[0];
     clickedId.current = feature.id ?? null;
 
     if (clickedId.current !== null) {
@@ -333,7 +504,7 @@ export const MapView = () => {
       properties: feature.properties as BarangayProps,
     });
     setPopup(null);
-  }, [clearClicked]);
+  }, [clearClicked, placementMode]);
 
   const onLoad = useCallback(() => {
     const map = mapRef.current?.getMap();
@@ -351,14 +522,13 @@ export const MapView = () => {
     <section id="map" className="bg-[#060c18] py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mb-10">
-          <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400">
-            Live coverage map
-          </p>
-          <h2 className="mt-4 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            Cebu healthcare accessibility.
-          </h2>
-          <p className="mt-4 text-lg text-slate-400">
-            Barangays colored by accessibility percentile, with healthcare facility markers. Click any area to pin details.
+          <SectionHeading index="02" label="Coverage map">
+            Every barangay, <em className="text-amber-200/90">on the map.</em>
+          </SectionHeading>
+          <p className="mt-4 max-w-xl text-lg text-slate-400">
+            Barangays colored by accessibility percentile, with healthcare facility markers.
+            Click a barangay to pin details, a facility for its drive-time reach — or test a
+            new location with what-if placement.
           </p>
         </div>
 
@@ -388,15 +558,15 @@ export const MapView = () => {
                       <CommandItem
                         key={b.id}
                         value={`${b.name}-${b.id}`}
-                        keywords={[b.name]}
+                        keywords={[b.name, b.municipality ?? '']}
                         onSelect={() => {
                           setSearchOpen(false);
                           selectBarangay(b);
                         }}
                       >
                         <span className="truncate">{b.name}</span>
-                        <span className="ml-auto font-mono text-xs text-muted-foreground">
-                          {Math.round(b.rank)}
+                        <span className="ml-auto truncate pl-2 text-right text-xs text-muted-foreground">
+                          {b.municipality}
                         </span>
                       </CommandItem>
                     ))}
@@ -405,6 +575,14 @@ export const MapView = () => {
               </Command>
             </PopoverContent>
           </Popover>
+
+          <Button
+            variant={placementMode ? 'default' : 'outline'}
+            onClick={() => setPlacementMode((p) => !p)}
+          >
+            <CirclePlus className="size-3.5" />
+            What-if placement
+          </Button>
 
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-500">Lower access</span>
@@ -443,7 +621,7 @@ export const MapView = () => {
         </div>
 
         <div
-          className="overflow-hidden rounded-3xl border border-white/8"
+          className="relative overflow-hidden rounded-3xl border border-white/8"
           style={{ height: '560px' }}
         >
             <Map
@@ -458,7 +636,8 @@ export const MapView = () => {
               style={{ width: '100%', height: '100%' }}
               mapStyle={MAPBOX_STYLE}
               mapboxAccessToken={MAPBOX_TOKEN}
-              interactiveLayerIds={['barangay-fill']}
+              interactiveLayerIds={['barangay-fill', 'facility-circles']}
+              cursor={placementMode ? 'crosshair' : undefined}
               onMouseMove={onMouseMove}
               onMouseLeave={onMouseLeave}
               onClick={onClick}
@@ -478,6 +657,21 @@ export const MapView = () => {
               <Layer {...facilityCircleLayer} filter={facilityFilter} />
               <Layer {...facilityLabelLayer} filter={facilityFilter} />
             </Source>
+
+            {isoState && (
+              <Source id="isochrone" type="geojson" data={isoState.data}>
+                <Layer {...isoFillLayer} />
+                <Layer {...isoLineLayer} />
+              </Source>
+            )}
+
+            {isoState?.kind === 'placement' && (
+              <Marker longitude={isoState.point[0]} latitude={isoState.point[1]} anchor="center">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-cyan-500 shadow-lg shadow-cyan-500/40">
+                  <CirclePlus className="h-4 w-4 text-slate-950" />
+                </div>
+              </Marker>
+            )}
 
             {activePopup && (
               <Popup
@@ -546,58 +740,253 @@ export const MapView = () => {
               </Popup>
             )}
           </Map>
+
+          {/* Overlay: hint, loading, and isochrone result cards */}
+          {placementMode && !isoState && !isoLoading && (
+            <Card size="sm" className="absolute left-4 top-4 z-10 bg-[#0a1628]/90 ring-white/10 backdrop-blur">
+              <CardContent className="text-xs text-slate-300">
+                Click anywhere on the map to test a facility location.
+              </CardContent>
+            </Card>
+          )}
+
+          {isoLoading && (
+            <Card size="sm" className="absolute left-4 top-4 z-10 bg-[#0a1628]/90 ring-white/10 backdrop-blur">
+              <CardContent className="flex items-center gap-2 text-xs text-slate-300">
+                <Loader2 className="size-3.5 animate-spin text-cyan-400" />
+                Calculating drive times…
+              </CardContent>
+            </Card>
+          )}
+
+          {isoState && !isoLoading && (
+            <Card size="sm" className="absolute left-4 top-4 z-10 max-w-72 bg-[#0a1628]/90 ring-white/10 backdrop-blur">
+              <CardContent>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <Timer className="size-3.5 shrink-0 text-cyan-400" />
+                    {isoState.label}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Clear drive-time overlay"
+                    onClick={() => setIsoState(null)}
+                  >
+                    <X />
+                  </Button>
+                </div>
+
+                {isoState.kind === 'facility' ? (
+                  <div className="mt-2 space-y-1.5 text-xs text-slate-400">
+                    <p>Drive-time coverage from this facility:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {isoState.minutes.map((m) => (
+                        <Badge
+                          key={m}
+                          variant="outline"
+                          className="gap-1.5 border-white/10 text-slate-300"
+                        >
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: ISO_COLORS[m] }}
+                          />
+                          {m} min
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  isoState.stats && (
+                    <div className="mt-2 space-y-1 text-xs text-slate-400">
+                      <p>
+                        Within a 30-minute drive:{' '}
+                        <span className="font-mono text-white">
+                          {isoState.stats.barangays}
+                        </span>{' '}
+                        barangays,{' '}
+                        <span className="font-mono text-white">
+                          {isoState.stats.population.toLocaleString()}
+                        </span>{' '}
+                        residents.
+                      </p>
+                      <p>
+                        Including{' '}
+                        <span className="font-mono text-red-400">{isoState.stats.veryLow}</span>{' '}
+                        very-low-access barangays (
+                        <span className="font-mono text-red-400">
+                          {isoState.stats.veryLowPop.toLocaleString()}
+                        </span>{' '}
+                        residents) that would gain coverage.
+                      </p>
+                    </div>
+                  )
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        <Card className="mt-8 rounded-3xl bg-[#0a1628]/60 ring-white/8">
-          <CardHeader>
-            <CardTitle className="text-white">Most underserved barangays</CardTitle>
-            <CardDescription>
-              Lowest accessibility percentile across {SUMMARY.length.toLocaleString()} barangays — click a row to locate it on the map.
+        <Card className="mt-8 rounded-2xl bg-[#0a1628]/40 ring-white/6">
+          <CardHeader className="border-b border-white/5 pb-4">
+            <CardTitle className="font-display text-xl">Barangay explorer</CardTitle>
+            <CardDescription className="text-slate-400">
+              Search, sort, and click any of the {SUMMARY.length.toLocaleString()} barangays to
+              locate it on the map.
             </CardDescription>
+            <div className="relative mt-3 max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
+              <Input
+                value={tableQuery}
+                onChange={(e) => {
+                  setTableQuery(e.target.value);
+                  setPage(0);
+                }}
+                placeholder="Filter by barangay or municipality…"
+                aria-label="Filter barangays by name or municipality"
+                className="h-9 border-white/10 bg-white/5 pl-9 text-sm placeholder:text-slate-600"
+              />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="max-h-80 overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/8 hover:bg-transparent">
-                    <TableHead className="w-10 text-slate-500">#</TableHead>
-                    <TableHead className="text-slate-500">Barangay</TableHead>
-                    <TableHead className="text-right text-slate-500">Access rank</TableHead>
-                    <TableHead className="text-slate-500">Category</TableHead>
-                    <TableHead className="text-right text-slate-500">Population</TableHead>
-                    <TableHead className="text-right text-slate-500">Facilities</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {underserved.map((b, i) => (
-                    <TableRow
-                      key={b.id}
-                      className="cursor-pointer border-white/5 hover:bg-white/5"
-                      onClick={() => selectBarangay(b)}
+            <Table>
+              <TableHeader>
+                <TableRow className="border-white/8 hover:bg-transparent">
+                  {(
+                    [
+                      ['name', 'Barangay', 'text-left'],
+                      ['municipality', 'Municipality', 'text-left'],
+                      ['rank', 'Access rank', 'text-right'],
+                      [null, 'Category', 'text-left'],
+                      ['population', 'Population', 'text-right'],
+                      ['facilities', 'Facilities', 'text-right'],
+                    ] as [SortKey | null, string, string][]
+                  ).map(([key, label, align]) => (
+                    <TableHead
+                      key={label}
+                      className={`text-xs uppercase tracking-wider text-slate-400 ${align}`}
+                      aria-sort={
+                        key === sortKey
+                          ? sortDir === 1
+                            ? 'ascending'
+                            : 'descending'
+                          : undefined
+                      }
                     >
-                      <TableCell className="font-mono text-slate-500">{i + 1}</TableCell>
-                      <TableCell className="font-medium text-white">{b.name}</TableCell>
-                      <TableCell className="text-right font-mono text-cyan-400">
-                        {b.rank.toFixed(1)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={CATEGORY_STYLES[b.category] ?? 'border-white/15 text-slate-400'}
+                      {key ? (
+                        <button
+                          type="button"
+                          aria-label={`Sort by ${label.toLowerCase()}`}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400/60"
+                          onClick={() => toggleSort(key)}
                         >
-                          {b.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-slate-300">
-                        {b.population.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-slate-300">
-                        {b.facilities}
-                      </TableCell>
-                    </TableRow>
+                          {label}
+                          {sortKey === key ? (
+                            sortDir === 1 ? (
+                              <ChevronUp className="size-3.5 text-cyan-400" />
+                            ) : (
+                              <ChevronDown className="size-3.5 text-cyan-400" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="size-3 opacity-40" />
+                          )}
+                        </button>
+                      ) : (
+                        label
+                      )}
+                    </TableHead>
                   ))}
-                </TableBody>
-              </Table>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageRows.length === 0 && (
+                  <TableRow className="border-white/5 hover:bg-transparent">
+                    <TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">
+                      No barangay matches “{tableQuery}” — try a different spelling.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {pageRows.map((b) => (
+                  <TableRow
+                    key={b.id}
+                    tabIndex={0}
+                    aria-label={`Show ${b.name}, ${b.municipality ?? 'Cebu'} on the map`}
+                    className="cursor-pointer border-white/5 odd:bg-white/[0.02] hover:bg-cyan-500/5 focus-visible:bg-cyan-500/5 focus-visible:outline-none"
+                    onClick={() => selectBarangay(b)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        selectBarangay(b);
+                      }
+                    }}
+                  >
+                    <TableCell className="font-medium text-foreground">{b.name}</TableCell>
+                    <TableCell className="text-slate-400">{b.municipality}</TableCell>
+                    <TableCell className="text-right">
+                      <span className="inline-flex items-center justify-end gap-2.5">
+                        <span className="font-mono text-foreground">{b.rank.toFixed(1)}</span>
+                        <span
+                          className="h-1.5 w-14 overflow-hidden rounded-full bg-white/10"
+                          aria-hidden="true"
+                        >
+                          <span
+                            className="block h-full rounded-full"
+                            style={{
+                              width: `${Math.max(3, b.rank)}%`,
+                              backgroundColor: CATEGORY_COLORS[b.category] ?? '#64748b',
+                            }}
+                          />
+                        </span>
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={CATEGORY_STYLES[b.category] ?? 'border-white/15 text-slate-400'}
+                      >
+                        {b.category.replace(' Access', '')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-slate-300">
+                      {b.population.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-slate-300">
+                      {b.facilities}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-500">
+                {sortedRows.length === 0
+                  ? 'No matches'
+                  : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, sortedRows.length)} of ${sortedRows.length.toLocaleString()}`}
+                {tableQuery.trim() && sortedRows.length > 0 && ' matching barangays'}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Previous page"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft /> Prev
+                </Button>
+                <span className="font-mono text-xs text-slate-400">
+                  {page + 1} / {pageCount}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Next page"
+                  disabled={page >= pageCount - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next <ChevronRight />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

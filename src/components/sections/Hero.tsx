@@ -1,84 +1,86 @@
-import { MapPin } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import barangaySummary from '../../assets/barangay_summary.json';
+
+interface BarangaySummary {
+  municipality: string | null;
+  population: number;
+  facilities: number;
+}
+
+const SUMMARY = barangaySummary as BarangaySummary[];
+
+const totalPopulation = SUMMARY.reduce((a, b) => a + (b.population ?? 0), 0);
+const totalFacilities = SUMMARY.reduce((a, b) => a + b.facilities, 0);
+const municipalities = new Set(SUMMARY.map((b) => b.municipality).filter(Boolean)).size;
 
 const STATS = [
-  { label: 'Live coverage maps', value: '24/7' },
-  { label: 'Placement prediction accuracy', value: '98%' },
-  { label: 'Faster site selection', value: '40%↓' },
+  {
+    value: `${(totalPopulation / 1e6).toFixed(1)}M`,
+    label: 'residents covered — PSA 2020 census',
+  },
+  { value: String(municipalities), label: 'cities & municipalities across Cebu' },
+  { value: totalFacilities.toLocaleString(), label: 'health facilities on record — DOH' },
 ];
 
 export const Hero = () => {
+  const scrollTo = (selector: string) =>
+    document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth' });
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#060c18] px-4 pt-32 pb-24 sm:px-6 lg:px-8">
-      {/* Animated map grid — the signature element */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="animate-grid-drift absolute inset-[-80px] opacity-[0.07]"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(34,211,238,0.6) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(34,211,238,0.6) 1px, transparent 1px)
-            `,
-            backgroundSize: '40px 40px',
-          }}
-        />
-        {/* Radial fade over grid */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,transparent_40%,#060c18_100%)]" />
-      </div>
+    <div id="top" className="relative overflow-hidden bg-[#060c18] px-4 pt-44 pb-28 sm:px-6 lg:px-8">
+      {/* Soft glow behind the headline */}
+      <div className="pointer-events-none absolute left-1/2 top-24 h-96 w-96 -translate-x-1/2 rounded-full bg-cyan-500/8 blur-[80px]" />
 
-      {/* Glow */}
-      <div className="pointer-events-none absolute left-1/2 top-20 h-96 w-96 -translate-x-1/2 rounded-full bg-cyan-500/8 blur-[80px]" />
-
-      <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-10 text-center">
-        <Badge
-          variant="outline"
-          className="h-auto gap-2 rounded-full border-cyan-500/20 bg-cyan-500/5 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-cyan-400"
-        >
-          <MapPin className="size-3.5!" />
-          Spatial healthcare intelligence
-        </Badge>
-
-        <h1 className="text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl lg:leading-[1.05]">
-          Map care gaps.<br />
-          <span className="text-cyan-400">Place facilities</span> where<br />
-          they matter most.
-        </h1>
-
-        <p className="max-w-2xl text-lg leading-relaxed text-slate-400">
-          HealthAccess combines live GIS data, accessibility scoring, and predictive placement models so health planners can close coverage gaps with confidence.
+      <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center text-center">
+        <p className="font-mono text-xs tracking-widest text-slate-500">
+          Cebu, Philippines · 1,203 barangays · updated June 2026
         </p>
 
-        <div className="flex w-full max-w-sm flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center">
+        <h1 className="font-display mt-8 max-w-4xl text-5xl font-medium leading-[1.08] tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+          See where healthcare access{' '}
+          <em className="text-amber-200/90">falls short</em>{' '}
+          in Cebu.
+        </h1>
+
+        <p className="mt-8 max-w-xl text-lg leading-relaxed text-slate-400">
+          An open GIS atlas that ranks every barangay in the province by healthcare
+          accessibility — made to help local government units see underserved communities
+          and decide where the next health facility matters most.
+        </p>
+
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
           <Button
             size="lg"
             className="h-12 px-7 text-base shadow-lg shadow-cyan-500/20"
-            onClick={() => document.querySelector('#features')?.scrollIntoView({ behavior: 'smooth' })}
+            onClick={() => scrollTo('#dashboard')}
           >
-            Explore features
+            View the analytics
+            <ArrowDown className="size-4" />
           </Button>
           <Button
-            variant="outline"
+            variant="link"
             size="lg"
-            className="h-12 px-7 text-base"
-            onClick={() => document.querySelector('#contact')?.scrollIntoView({ behavior: 'smooth' })}
+            className="h-12 text-base text-slate-300"
+            onClick={() => scrollTo('#map')}
           >
-            Contact sales
+            or jump straight to the map →
           </Button>
         </div>
 
-        <div className="mt-4 grid w-full max-w-3xl gap-4 sm:grid-cols-3">
-          {STATS.map((item) => (
-            <Card
+        <div className="mt-20 flex w-full max-w-3xl flex-col gap-8 sm:flex-row sm:gap-0">
+          {STATS.map((item, i) => (
+            <div
               key={item.label}
-              className="rounded-2xl bg-white/3 text-left ring-white/8 backdrop-blur-sm"
+              className={
+                i === 0
+                  ? 'text-center sm:flex-1 sm:pr-8'
+                  : 'text-center sm:flex-1 sm:border-l sm:border-white/10 sm:px-8'
+              }
             >
-              <CardContent>
-                <p className="font-mono text-3xl font-semibold text-white">{item.value}</p>
-                <p className="mt-2 text-sm text-slate-500">{item.label}</p>
-              </CardContent>
-            </Card>
+              <p className="font-mono text-4xl text-foreground">{item.value}</p>
+              <p className="mt-2 text-sm leading-5 text-slate-500">{item.label}</p>
+            </div>
           ))}
         </div>
       </div>

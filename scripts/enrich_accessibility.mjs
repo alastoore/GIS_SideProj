@@ -55,6 +55,7 @@ const summary = features.map((f, i) => {
   return {
     id: i, // matches mapbox generateId feature id
     name: f.properties.adm4_name,
+    municipality: f.properties.municipality ?? null,
     rank,
     category: cat,
     population: f.properties.population,

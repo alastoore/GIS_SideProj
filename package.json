@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
+    "@fontsource-variable/newsreader": "^5.2.10",
+    "@fontsource-variable/sometype-mono": "^5.2.7",
     "@radix-ui/react-dialog": "^1.1.16",
     "@radix-ui/react-popover": "^1.1.16",
     "@radix-ui/react-separator": "^1.1.9",
@@ -25,6 +27,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-map-gl": "^8.1.1",
+    "recharts": "^3.8.0",
     "shadcn": "^4.11.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0",

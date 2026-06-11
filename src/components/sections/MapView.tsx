@@ -10,7 +10,9 @@ import {
   ChevronsUpDown,
   ChevronUp,
   CirclePlus,
+  ExternalLink,
   Loader2,
+  LocateFixed,
   Search,
   Timer,
   X,
@@ -43,7 +45,7 @@ import {
   FACILITY_COLORS,
   FACILITY_TYPES,
 } from '@/lib/map-constants';
-import { pointInFeature } from '@/lib/geo';
+import { haversineKm, pointInFeature } from '@/lib/geo';
 import { SectionHeading } from '@/components/section-heading';
 import { useTheme } from '@/components/theme-provider';
 import geojsonData from '../../assets/cebu_health_accessibility.geojson';
@@ -103,6 +105,19 @@ interface IsoState {
     veryLow: number;
     veryLowPop: number;
   };
+}
+
+interface NearFacility {
+  name: string;
+  type: string;
+  coords: [number, number];
+  km: number;
+  minutes: number | null;
+}
+
+interface NearMeState {
+  point: [number, number];
+  results: NearFacility[];
 }
 
 async function fetchIsochrone(
@@ -226,10 +241,7 @@ const facilityCircleLayer: any = {
     'circle-color': [
       'match',
       ['get', 'type'],
-      'Hospital', FACILITY_COLORS.Hospital,
-      'Clinic', FACILITY_COLORS.Clinic,
-      'Health Center', FACILITY_COLORS['Health Center'],
-      'Birthing Center', FACILITY_COLORS['Birthing Center'],
+      ...Object.entries(FACILITY_COLORS).flat(),
       '#94a3b8',
     ],
     'circle-radius': [
@@ -286,6 +298,10 @@ export const MapView = () => {
   const [placementMode, setPlacementMode] = useState(false);
   const [isoState, setIsoState] = useState<IsoState | null>(null);
   const [isoLoading, setIsoLoading] = useState(false);
+  const [nearMe, setNearMe] = useState<NearMeState | null>(null);
+  const [nearMeStatus, setNearMeStatus] = useState<'idle' | 'locating' | 'error'>('idle');
+  const [nearMeError, setNearMeError] = useState('');
+  const facilitiesCache = useRef<FeatureCollection | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [page, setPage] = useState(0);
@@ -429,6 +445,76 @@ export const MapView = () => {
     }
     hoveredId.current = null;
     if (clickedId.current === null) setPopup(null);
+  }, []);
+
+  const findCareNearMe = useCallback(() => {
+    if (!navigator.geolocation) {
+      setNearMeError('Your browser does not support location.');
+      setNearMeStatus('error');
+      return;
+    }
+    setNearMeStatus('locating');
+    setNearMeError('');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const me: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+        try {
+          if (!facilitiesCache.current) {
+            facilitiesCache.current = await fetch(facilitiesData as unknown as string).then(
+              (r) => r.json()
+            );
+          }
+          const nearest = facilitiesCache.current!.features
+            .map((f) => {
+              const coords = (f.geometry as Point).coordinates as [number, number];
+              return {
+                name: (f.properties?.name as string) || (f.properties?.type as string),
+                type: f.properties?.type as string,
+                coords,
+                km: haversineKm(me, coords),
+                minutes: null as number | null,
+              };
+            })
+            .sort((a, b) => a.km - b.km)
+            .slice(0, 6);
+
+          // Real drive times via the Matrix API; fall back to distance only.
+          try {
+            const coordsStr = [me, ...nearest.map((d) => d.coords)]
+              .map((c) => c.join(','))
+              .join(';');
+            const r = await fetch(
+              `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordsStr}?sources=0&annotations=duration&access_token=${MAPBOX_TOKEN}`
+            );
+            if (r.ok) {
+              const j = await r.json();
+              const durations: (number | null)[] = j.durations?.[0]?.slice(1) ?? [];
+              durations.forEach((s, i) => {
+                if (s != null && nearest[i]) nearest[i].minutes = Math.round(s / 60);
+              });
+            }
+          } catch {
+            // distance-only fallback
+          }
+
+          setNearMe({ point: me, results: nearest });
+          setNearMeStatus('idle');
+          mapRef.current?.getMap()?.flyTo({ center: me, zoom: 12.5, duration: 1800 });
+        } catch {
+          setNearMeError('Could not load facility data — try again.');
+          setNearMeStatus('error');
+        }
+      },
+      (err) => {
+        setNearMeError(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location permission was denied — allow it in your browser and try again.'
+            : 'Could not determine your location — try again.'
+        );
+        setNearMeStatus('error');
+      },
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
   }, []);
 
   // Barangays whose centroid falls inside any isochrone contour.
@@ -601,6 +687,19 @@ export const MapView = () => {
             What-if placement
           </Button>
 
+          <Button
+            variant="outline"
+            onClick={findCareNearMe}
+            disabled={nearMeStatus === 'locating'}
+          >
+            {nearMeStatus === 'locating' ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <LocateFixed className="size-3.5" />
+            )}
+            Find care near me
+          </Button>
+
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">Lower access</span>
             <div
@@ -690,6 +789,15 @@ export const MapView = () => {
               </Marker>
             )}
 
+            {nearMe && (
+              <Marker longitude={nearMe.point[0]} latitude={nearMe.point[1]} anchor="center">
+                <span className="relative flex h-5 w-5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-60" />
+                  <span className="relative inline-flex h-5 w-5 rounded-full border-2 border-white bg-cyan-500 shadow-lg" />
+                </span>
+              </Marker>
+            )}
+
             {activePopup && (
               <Popup
                 longitude={activePopup.longitude}
@@ -757,6 +865,85 @@ export const MapView = () => {
               </Popup>
             )}
           </Map>
+
+          {/* Overlay: find-care-near-me results */}
+          {nearMeStatus === 'error' && (
+            <Card size="sm" className="absolute right-4 top-4 z-10 max-w-72 bg-popover/90 ring-border backdrop-blur">
+              <CardContent className="flex items-start justify-between gap-2 text-xs text-muted-foreground">
+                <span>{nearMeError}</span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Dismiss"
+                  onClick={() => setNearMeStatus('idle')}
+                >
+                  <X />
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {nearMe && (
+            <Card size="sm" className="absolute right-4 top-4 z-10 w-80 max-w-[calc(100%-2rem)] bg-popover/90 ring-border backdrop-blur">
+              <CardContent>
+                <div className="flex items-start justify-between gap-3">
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    <LocateFixed className="size-3.5 shrink-0 text-primary" />
+                    Care near you
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Clear nearby results"
+                    onClick={() => setNearMe(null)}
+                  >
+                    <X />
+                  </Button>
+                </div>
+                {nearMe.results[0]?.km > 100 && (
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    You appear to be outside Cebu — showing the closest mapped facilities anyway.
+                  </p>
+                )}
+                <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+                  {nearMe.results.map((f) => (
+                    <li
+                      key={`${f.coords[0]}-${f.coords[1]}`}
+                      className="rounded-lg border border-border/60 p-2"
+                    >
+                      <button
+                        type="button"
+                        className="block w-full cursor-pointer text-left"
+                        onClick={() =>
+                          mapRef.current?.getMap()?.flyTo({ center: f.coords, zoom: 14.5, duration: 1200 })
+                        }
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span
+                            className="inline-block h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: FACILITY_COLORS[f.type] ?? '#94a3b8' }}
+                          />
+                          <span className="truncate text-xs font-medium text-foreground">{f.name}</span>
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                          {f.type} · {f.km.toFixed(1)} km
+                          {f.minutes != null && ` · ~${f.minutes} min drive`}
+                        </span>
+                      </button>
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&origin=${nearMe.point[1]},${nearMe.point[0]}&destination=${f.coords[1]},${f.coords[0]}&travelmode=driving`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                      >
+                        Get directions <ExternalLink className="size-2.5" />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Overlay: hint, loading, and isochrone result cards */}
           {placementMode && !isoState && !isoLoading && (

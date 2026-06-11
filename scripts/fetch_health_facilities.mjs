@@ -4,12 +4,17 @@
 
 import { writeFileSync } from 'node:fs';
 
+// Everything OSM knows as healthcare in Cebu province, plus the three
+// highly-urbanized cities in case the province polygon excludes them.
 const query = `
-[out:json][timeout:120];
-area["name"="Cebu"]["admin_level"="4"]["boundary"="administrative"]->.cebu;
+[out:json][timeout:180];
 (
-  nwr["amenity"~"^(hospital|clinic|doctors)$"](area.cebu);
-  nwr["healthcare"~"^(hospital|clinic|centre|health_post|doctor|doctors|birthing_centre|midwife)$"](area.cebu);
+  area["name"="Cebu"]["admin_level"="4"]["boundary"="administrative"];
+  area["name"~"^(Cebu City|Mandaue|Lapu-Lapu)$"]["admin_level"~"^(5|6)$"]["boundary"="administrative"];
+)->.cebu;
+(
+  nwr["healthcare"](area.cebu);
+  nwr["amenity"~"^(hospital|clinic|doctors|dentist|pharmacy)$"](area.cebu);
 );
 out center tags;
 `;
@@ -18,6 +23,10 @@ function facilityType(tags) {
   const healthcare = tags.healthcare ?? '';
   const amenity = tags.amenity ?? '';
   if (healthcare === 'hospital' || amenity === 'hospital') return 'Hospital';
+  if (healthcare === 'pharmacy' || amenity === 'pharmacy') return 'Pharmacy';
+  if (healthcare === 'dentist' || amenity === 'dentist') return 'Dentist';
+  if (healthcare === 'laboratory' || healthcare === 'sample_collection' || healthcare === 'blood_donation')
+    return 'Laboratory';
   if (healthcare === 'centre' || healthcare === 'health_post') return 'Health Center';
   if (healthcare === 'birthing_centre' || healthcare === 'midwife') return 'Birthing Center';
   return 'Clinic';

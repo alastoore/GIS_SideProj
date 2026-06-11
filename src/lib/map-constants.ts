@@ -6,6 +6,9 @@ export const FACILITY_COLORS: Record<string, string> = {
   Clinic: '#a855f7',
   'Health Center': '#f8fafc',
   'Birthing Center': '#f472b6',
+  Pharmacy: '#2dd4bf',
+  Dentist: '#818cf8',
+  Laboratory: '#64748b',
 };
 
 export const FACILITY_TYPES = Object.keys(FACILITY_COLORS);
